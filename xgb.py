@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import numpy as np
 from xgboost import XGBClassifier
@@ -21,7 +22,6 @@ def apply_XGBc(X, y, split=True, params={}):
     return model, report
 
 def split_data(data_X, data_y):
-    data_y = data_y    # Categories started at 1, needed decrement
     
     X, X_test, y, y_test = train_test_split(data_X, data_y,
                                             test_size=0.1, random_state=0)
@@ -73,11 +73,11 @@ def evaluate_XGBc_model(model, X_test, y_test):
 iris = datasets.load_iris(as_frame=True)
 iris_model, iris_report = apply_XGBc(iris.data, iris.target)
 
-#%%
+#%% Wine
 wine = datasets.load_wine(as_frame=True)
 wine_model, wine_report = apply_XGBc(wine.data, wine.target)
 
-#%%
+#%% Cancer
 cancer = datasets.load_breast_cancer(as_frame=True)
 
 label_encoder = LabelEncoder()
@@ -85,9 +85,6 @@ cancer_y = label_encoder.fit_transform(cancer.target.to_numpy())
 cancer_X = pd.get_dummies(cancer.data)
 
 cancer_model, cancer_report = apply_XGBc(cancer_X, cancer_y)
-#%%
-print((np.unique(cancer.target.to_numpy())))
-
 
 #%% -------- Large datasets --------
 # Forest cover type
@@ -101,6 +98,33 @@ report = evaluate_XGBc_model(covtype_model, covtype_splits['X_test'],
 
 
 #%% -------- Large datasets --------
+# German credit risk
+credit = datasets.fetch_openml(data_id=31)
+
+label_encoder = LabelEncoder()
+credit_y = label_encoder.fit_transform(credit.target.to_numpy())
+credit_X = pd.get_dummies(credit.data)
+credit_X.columns = credit_X.columns.str.replace('<', 'lt')
+
+credit_model, credit_report = apply_XGBc(credit_X, credit_y)
+
+#%% -------- Large datasets --------
+# Speed Dating 
+dating = datasets.fetch_openml(data_id=40536)
+
+label_encoder = LabelEncoder()
+dating_y = label_encoder.fit_transform(dating.target.to_numpy())
+
+dating_X = pd.get_dummies(dating.data)
+dating_X.columns = dating_X.columns.str.replace('<', 'lt')
+dating_X.columns = dating_X.columns.str.replace('[', '(')
+dating_X.columns = dating_X.columns.str.replace(']', ')')
+
+dating_params = {'max_depth' : 1}
+dating_model, dating_report = apply_XGBc(dating_X, dating_y,
+                                         params=dating_params)
+
+#%% -------- Large datasets --------
 # News group type
 newsgroups = datasets.fetch_20newsgroups(remove=('headers',
                                                  'footers',
@@ -112,17 +136,6 @@ X_data = vectorizer.fit_transform(newsgroups.data)
 y_data = newsgroups.target
 
 newsgroups_params = {'max_depth' : 6}
-newsgroups_model, newsgroups_report = apply_XGBc(X_data, y_data, params=params)
+newsgroups_model, newsgroups_report = apply_XGBc(X_data, y_data,
+                                                 params=newsgroups_params)
 
-#%% -------- Large datasets --------
-# Credit risk
-risk = datasets.fetch_openml(data_id=31, as_frame=True)
-apply_XGBc(risk.data, risk.target)
-
-#%% Columns are no all numerical, would need encoding
-kdd = datasets.fetch_kddcup99(subset='SA', as_frame=True)
-
-enc = OrdinalEncoder()
-kdd_y = enc.fit_transform(kdd.target.to_numpy().reshape(1, -1)).reshape(-1, 1)
-
-apply_XGBc(kdd.data, kdd_y)
